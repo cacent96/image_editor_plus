@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_editor_plus/data/layer.dart';
 import 'package:image_editor_plus/image_editor_plus.dart';
-import 'colors_picker.dart';
+import 'custom_color_picker.dart'; // Import the custom color picker
 
 class TextLayerOverlay extends StatefulWidget {
   final int index;
@@ -19,23 +19,29 @@ class TextLayerOverlay extends StatefulWidget {
   createState() => _TextLayerOverlayState();
 }
 
-class _TextLayerOverlayState extends State<TextLayerOverlay> {
+class _TextLayerOverlayState extends State<TextLayerOverlay> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
   double slider = 0.0;
 
   @override
   void initState() {
-    //  slider = widget.sizevalue;
-
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 450,
-      decoration: const BoxDecoration(
-        color: Colors.black87,
-        borderRadius: BorderRadius.only(
+      height: 318,
+      decoration: BoxDecoration(
+        color: Colors.grey[900],
+        borderRadius: const BorderRadius.only(
           topRight: Radius.circular(10),
           topLeft: Radius.circular(10),
         ),
@@ -43,198 +49,183 @@ class _TextLayerOverlayState extends State<TextLayerOverlay> {
       child: Column(
         children: [
           const SizedBox(height: 10),
-          Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Container(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text(
-                  i18n('Size'),
-                  style: const TextStyle(color: Colors.white),
+          // Custom tab
+          Row(
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              SizedBox(
+                width: MediaQuery.of(context).size.width * 0.55, // 55% of screen width
+                child: TabBar(
+                  controller: _tabController,
+                  indicator: const BoxDecoration(), // Remove underline
+                  tabs: [
+                    Tab(
+                      child: Text(
+                        'Color',
+                        style: TextStyle(
+                          color: _tabController.index == 0 ? Colors.white : Colors.grey,
+                        ),
+                      ),
+                    ),
+                    Tab(
+                      child: Text(
+                        'Background',
+                        style: TextStyle(
+                          color: _tabController.index == 1 ? Colors.white : Colors.grey,
+                        ),
+                      ),
+                    ),
+                  ],
+                  onTap: (index) {
+                    setState(() {}); // Refresh to update text color
+                  },
                 ),
               ),
-              Row(children: [
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Slider(
-                    thumbColor: Colors.white,
-                    value: widget.layer.size,
-                    min: 0.0,
-                    max: 100.0,
-                    onChangeEnd: (v) {
-                      setState(() {
-                        widget.layer.size = v.toDouble();
-                        widget.onUpdate();
-                      });
-                    },
-                    onChanged: (v) {
-                      setState(() {
-                        slider = v;
-                        // print(v.toDouble());
-                        widget.layer.size = v.toDouble();
-                        widget.onUpdate();
-                      });
-                    },
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.layer.backgroundOpacity = 0.5;
-                      widget.onUpdate();
-                    });
-                  },
-                  child: Text(
-                    i18n('Reset'),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ]),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text(
-                  i18n('Color'),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              Row(children: [
-                const SizedBox(width: 16),
-                Expanded(
-                  child: BarColorPicker(
-                    width: 300,
-                    thumbColor: Colors.white,
-                    initialColor: widget.layer.color,
-                    cornerRadius: 10,
-                    pickMode: PickMode.color,
-                    colorListener: (int value) {
-                      setState(() {
-                        widget.layer.color = Color(value);
-                        widget.onUpdate();
-                      });
-                    },
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.layer.color = Colors.black;
-                      widget.onUpdate();
-                    });
-                  },
-                  child: Text(i18n('Reset'),
-                      style: const TextStyle(color: Colors.white)),
-                ),
-                const SizedBox(width: 16),
-              ]),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text(
-                  i18n('Background Color'),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              Row(children: [
-                const SizedBox(width: 16),
-                Expanded(
-                  child: BarColorPicker(
-                    width: 300,
-                    initialColor: widget.layer.background,
-                    thumbColor: Colors.white,
-                    cornerRadius: 10,
-                    pickMode: PickMode.color,
-                    colorListener: (int value) {
-                      setState(() {
-                        widget.layer.background = Color(value);
-                        if (widget.layer.backgroundOpacity == 0) {
-                          widget.layer.backgroundOpacity = 0.5;
-                        }
-
-                        widget.onUpdate();
-                      });
-                    },
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.layer.background = Colors.transparent;
-                      widget.layer.backgroundOpacity = 0;
-                      widget.onUpdate();
-                    });
-                  },
-                  child: Text(
-                    i18n('Reset'),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ]),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.only(left: 16),
-                child: Text(
-                  i18n('Background Opacity'),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ),
-              Row(children: [
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Slider(
-                    min: 0,
-                    max: 1,
-                    divisions: 100,
-                    value: widget.layer.backgroundOpacity,
-                    thumbColor: Colors.white,
-                    onChanged: (double value) {
-                      setState(() {
-                        widget.layer.backgroundOpacity = value;
-                        widget.onUpdate();
-                      });
-                    },
-                  ),
-                ),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      widget.layer.backgroundOpacity = 0;
-                      widget.onUpdate();
-                    });
-                  },
-                  child: Text(
-                    i18n('Reset'),
-                    style: const TextStyle(color: Colors.white),
-                  ),
-                ),
-                const SizedBox(width: 16),
-              ]),
-            ]),
+            ],
           ),
-          const SizedBox(height: 10),
-          Row(children: [
-            Expanded(
-              child: TextButton(
-                onPressed: () {
-                  removedLayers.add(layers.removeAt(widget.index));
-
-                  Navigator.pop(context);
-                  widget.onUpdate();
-                  // back(context);
-                  // setState(() {});
-                },
-                child: Text(
-                  i18n('Remove'),
-                  style: const TextStyle(color: Colors.white),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                // Content Color Tab
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomColorPicker(
+                        initialColor: widget.layer.color,
+                        onColorSelected: (color) {
+                          setState(() {
+                            widget.layer.color = color;
+                            widget.onUpdate();
+                          });
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                // Background Color Tab
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      CustomColorPicker(
+                        initialColor: widget.layer.background,
+                        onColorSelected: (color) {
+                          setState(() {
+                            widget.layer.background = color;
+                            if (widget.layer.backgroundOpacity == 0) {
+                              widget.layer.backgroundOpacity = 0.5;
+                            }
+                            widget.onUpdate();
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ]),
+          ),
+          // Always visible size and opacity sliders
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Size',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          Slider(
+                            thumbColor: Colors.green,
+                            activeColor: Colors.green,
+                            value: widget.layer.size,
+                            min: 0.0,
+                            max: 100.0,
+                            onChangeEnd: (v) {
+                              setState(() {
+                                widget.layer.size = v.toDouble();
+                                widget.onUpdate();
+                              });
+                            },
+                            onChanged: (v) {
+                              setState(() {
+                                slider = v;
+                                widget.layer.size = v.toDouble();
+                                widget.onUpdate();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          widget.layer.size = 0.0;
+                          widget.onUpdate();
+                        });
+                      },
+                      child: const Text(
+                        'Reset',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Background Opacity',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                          Slider(
+                            thumbColor: Colors.green,
+                            activeColor: Colors.green,
+                            min: 0,
+                            max: 1,
+                            divisions: 100,
+                            value: widget.layer.backgroundOpacity,
+                            onChanged: (double value) {
+                              setState(() {
+                                widget.layer.backgroundOpacity = value;
+                                widget.onUpdate();
+                              });
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: () {
+                        setState(() {
+                          widget.layer.backgroundOpacity = 0.5;
+                          widget.onUpdate();
+                        });
+                      },
+                      child: const Text(
+                        'Reset',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );

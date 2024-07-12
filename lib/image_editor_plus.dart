@@ -8,7 +8,6 @@ import 'package:extended_image/extended_image.dart';
 import 'package:flex_color_picker/flex_color_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// import 'package:flutter_colorpicker/flutter_colorpicker.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:hand_signature/signature.dart';
 import 'package:image/image.dart' as img;
@@ -123,10 +122,10 @@ class ImageEditor extends StatelessWidget {
   static ThemeData theme = ThemeData(
     scaffoldBackgroundColor: Colors.black,
     colorScheme: const ColorScheme.dark(
-      surface: Colors.black,
+      surface: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Colors.black87,
+      backgroundColor: Colors.black,
       iconTheme: IconThemeData(color: Colors.white),
       systemOverlayStyle: SystemUiOverlayStyle.light,
       toolbarTextStyle: TextStyle(color: Colors.white),
@@ -568,16 +567,6 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
                 if (widget.outputFormat == o.OutputFormat.json) {
                   var json = layers.map((e) => e.toJson()).toList();
 
-                  // if ((widget.outputFormat & 0xFE) > 0) {
-                  //   var editedImageBytes =
-                  //       await getMergedImage(widget.outputFormat & 0xFE);
-
-                  //   json.insert(0, {
-                  //     'type': 'MergedLayer',
-                  //     'image': editedImageBytes,
-                  //   });
-                  // }
-
                   loadingScreen.hide();
 
                   if (mounted) Navigator.pop(context, json);
@@ -659,10 +648,6 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
   Widget build(BuildContext context) {
     viewportSize = MediaQuery.of(context).size;
     pixelRatio = MediaQuery.of(context).devicePixelRatio;
-
-    // widthRatio = currentImage.width / viewportSize.width;
-    // heightRatio = currentImage.height / viewportSize.height;
-    // pixelRatio = math.max(heightRatio, widthRatio);
 
     return Theme(
       data: ImageEditor.theme,
@@ -933,11 +918,13 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
                       icon: Icons.text_fields,
                       text: i18n('Text'),
                       onTap: () async {
-                        TextLayerData? layer = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const TextEditorImage(),
-                          ),
+                        TextLayerData? layer = await showModalBottomSheet<TextLayerData>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.black,
+                          builder: (BuildContext context) {
+                            return const TextEditorImage();
+                          },
                         );
 
                         if (layer == null) return;
@@ -955,11 +942,13 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
                       icon: Icons.link,
                       text: i18n('Link'),
                       onTap: () async {
-                        LinkLayerData? layer = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const LinkEditorImage(),
-                          ),
+                        LinkLayerData? layer = await showModalBottomSheet<LinkLayerData>(
+                          context: context,
+                          isScrollControlled: true,
+                          backgroundColor: Colors.black,
+                          builder: (BuildContext context) {
+                            return const LinkEditorImage();
+                          },
                         );
 
                         if (layer == null) return;
@@ -1415,59 +1404,6 @@ class _ImageCropperState extends State<ImageCropper> {
             height: 80,
             child: Column(
               children: [
-                // Container(
-                //   height: 48,
-                //   decoration: const BoxDecoration(
-                //     boxShadow: [
-                //       BoxShadow(
-                //         color: black,
-                //         blurRadius: 10,
-                //       ),
-                //     ],
-                //   ),
-                //   child: ListView(
-                //     scrollDirection: Axis.horizontal,
-                //     children: <Widget>[
-                //       IconButton(
-                //         icon: Icon(
-                //           Icons.portrait,
-                //           color: isLandscape ? gray : white,
-                //         ).paddingSymmetric(horizontal: 8, vertical: 4),
-                //         onPressed: () {
-                //           isLandscape = false;
-                //
-                //           setState(() {});
-                //         },
-                //       ),
-                //       IconButton(
-                //         icon: Icon(
-                //           Icons.landscape,
-                //           color: isLandscape ? white : gray,
-                //         ).paddingSymmetric(horizontal: 8, vertical: 4),
-                //         onPressed: () {
-                //           isLandscape = true;
-                //
-                //           setState(() {});
-                //         },
-                //       ),
-                //       Slider(
-                //         activeColor: Colors.white,
-                //         inactiveColor: Colors.grey,
-                //         value: rotateAngle.toDouble(),
-                //         min: 0.0,
-                //         max: 100.0,
-                //         onChangeEnd: (v) {
-                //           rotateAngle = v.toInt();
-                //           setState(() {});
-                //         },
-                //         onChanged: (v) {
-                //           rotateAngle = v.toInt();
-                //           setState(() {});
-                //         },
-                //       ),
-                //     ],
-                //   ),
-                // ),
                 Container(
                   height: 80,
                   decoration: const BoxDecoration(

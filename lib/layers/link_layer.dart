@@ -34,45 +34,44 @@ class _TextViewState extends State<LinkLayer> {
       child: GestureDetector(
         onTap: widget.editable
             ? () {
-                showModalBottomSheet(
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.only(
-                      topRight: Radius.circular(10),
-                      topLeft: Radius.circular(10),
-                    ),
-                  ),
-                  context: context,
-                  backgroundColor: Colors.transparent,
-                  builder: (context) {
-                    return LinkLayerOverlay(
-                      index: layers.indexOf(widget.layerData),
-                      layer: widget.layerData,
-                      onUpdate: () {
-                        if (widget.onUpdate != null) widget.onUpdate!();
-                        setState(() {});
-                      },
-                    );
-                  },
-                );
-              }
+          showModalBottomSheet(
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.only(
+                topRight: Radius.circular(10),
+                topLeft: Radius.circular(10),
+              ),
+            ),
+            context: context,
+            backgroundColor: Colors.transparent,  // Make the background transparent
+            barrierColor: Colors.transparent,  // Set the barrier color to transparent
+            builder: (context) {
+              return LinkLayerOverlay(
+                index: layers.indexOf(widget.layerData),
+                layer: widget.layerData,
+                onUpdate: () {
+                  if (widget.onUpdate != null) widget.onUpdate!();
+                  setState(() {});
+                },
+              );
+            },
+          );
+        }
             : null,
         onScaleUpdate: widget.editable
             ? (detail) {
-                if (detail.pointerCount == 1) {
-                  widget.layerData.offset = Offset(
-                    widget.layerData.offset.dx + detail.focalPointDelta.dx,
-                    widget.layerData.offset.dy + detail.focalPointDelta.dy,
-                  );
-                } else if (detail.pointerCount == 2) {
-                  widget.layerData.size =
-                      initialSize + detail.scale * (detail.scale > 1 ? 1 : -1);
+          if (detail.pointerCount == 1) {
+            widget.layerData.offset = Offset(
+              widget.layerData.offset.dx + detail.focalPointDelta.dx,
+              widget.layerData.offset.dy + detail.focalPointDelta.dy,
+            );
+          } else if (detail.pointerCount == 2) {
+            widget.layerData.size =
+                initialSize + detail.scale * (detail.scale > 1 ? 1 : -1);
 
-                  // print('angle');
-                  // print(detail.rotation);
-                  widget.layerData.rotation = detail.rotation;
-                }
-                setState(() {});
-              }
+            widget.layerData.rotation = detail.rotation;
+          }
+          setState(() {});
+        }
             : null,
         child: Transform.rotate(
           angle: widget.layerData.rotation,
