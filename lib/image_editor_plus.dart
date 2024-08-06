@@ -1,5 +1,4 @@
 library image_editor_plus;
-
 import 'dart:async';
 import 'dart:math' as math;
 import 'package:colorfilter_generator/colorfilter_generator.dart';
@@ -23,7 +22,6 @@ import 'package:image_editor_plus/options.dart' as o;
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:screenshot/screenshot.dart';
-
 import 'modules/colors_picker.dart';
 
 late Size viewportSize;
@@ -518,8 +516,6 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
 
                     if (image == null) return;
 
-                    // loadImage(image);
-
                     var imageItem = ImageItem(image);
                     await imageItem.loader.future;
 
@@ -545,8 +541,6 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
 
                     if (image == null) return;
 
-                    // loadImage(image);
-
                     var imageItem = ImageItem(image);
                     await imageItem.loader.future;
 
@@ -571,11 +565,9 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
 
                   if (mounted) Navigator.pop(context, json);
                 } else {
-                  var editedImageBytes =
-                      await getMergedImage(widget.outputFormat);
+                  var editedImageBytes = await getMergedImage(widget.outputFormat);
 
                   loadingScreen.hide();
-
                   if (mounted) Navigator.pop(context, editedImageBytes);
                 }
               },
@@ -621,7 +613,13 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
     Uint8List? image;
 
     if (flipValue != 0 || rotateValue != 0 || layers.length > 1) {
-      image = await screenshotController.capture(pixelRatio: pixelRatio);
+      try {
+        // Capture screenshot with specified pixel ratio
+        image = await screenshotController.capture(pixelRatio: pixelRatio);
+
+      } catch (e) {
+        print('Error during screenshot capture: $e');
+      }
     } else if (layers.length == 1) {
       if (layers.first is BackgroundLayerData) {
         image = (layers.first as BackgroundLayerData).image.bytes;
@@ -647,7 +645,8 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
   @override
   Widget build(BuildContext context) {
     viewportSize = MediaQuery.of(context).size;
-    pixelRatio = MediaQuery.of(context).devicePixelRatio;
+    double calculatedPixelRatio = (currentImage.width / viewportSize.width).ceilToDouble();
+    pixelRatio = calculatedPixelRatio;
 
     return Theme(
       data: ImageEditor.theme,
@@ -656,15 +655,6 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
           GestureDetector(
             onScaleUpdate: (details) {
               // print(details);
-
-              // move
-              if (details.pointerCount == 1) {
-                // print(details.focalPointDelta);
-                x += details.focalPointDelta.dx;
-                y += details.focalPointDelta.dy;
-                setState(() {});
-              }
-
               // scale
               if (details.pointerCount == 2) {
                 // print([details.horizontalScale, details.verticalScale]);
@@ -1269,9 +1259,9 @@ class _SingleImageEditorState extends State<SingleImageEditor> {
     layers.add(BackgroundLayerData(
       image: currentImage,
     ));
-
     setState(() {});
   }
+
 }
 
 /// Button used in bottomNavigationBar in ImageEditor
@@ -1815,36 +1805,57 @@ class _ImageEditorDrawingState extends State<ImageEditorDrawing> {
     smoothRatio: 0.65,
     velocityRange: 2.0,
   );
-
+  double selectedFontWeight = 2.0;
   List<CubicPath> undoList = [];
   bool skipNextEvent = false;
+  bool isLoading = true;
+  late double imageWidth;
+  late double imageHeight;
+  late Uint8List imageBytes;
+
+  Future<void> _loadImage() async {
+    await Future.delayed(Duration(milliseconds: 500));
+    imageWidth = widget.image.width.toDouble();
+    imageHeight = widget.image.height.toDouble();
+    imageBytes = widget.image.bytes;
+    setState(() {
+      isLoading = false;
+    });
+  }
 
   void changeColor(o.BrushColor color) {
     currentColor = color.color;
     currentBackgroundColor = color.background;
-
     setState(() {});
   }
 
   @override
   void initState() {
+    super.initState();
+    _loadImage();
     control.addListener(() {
       if (control.hasActivePath) return;
-
       if (skipNextEvent) {
         skipNextEvent = false;
         return;
       }
-
       undoList = [];
       setState(() {});
     });
-
-    super.initState();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (isLoading) {
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF32CD32)),
+        ),
+      );
+    }
+
+    final aspectRatio = imageWidth / imageHeight;
+
     return Theme(
       data: ImageEditor.theme,
       child: Scaffold(
@@ -1885,7 +1896,6 @@ class _ImageEditorDrawingState extends State<ImageEditorDrawing> {
               ),
               onPressed: () {
                 if (undoList.isEmpty) return;
-
                 control.paths.add(undoList.removeLast());
                 setState(() {});
               },
@@ -1894,127 +1904,196 @@ class _ImageEditorDrawingState extends State<ImageEditorDrawing> {
               padding: const EdgeInsets.symmetric(horizontal: 8),
               icon: const Icon(Icons.check),
               onPressed: () async {
-                if (control.paths.isEmpty) return Navigator.pop(context);
+                if (control.paths.isEmpty) {
+                  return Navigator.pop(context);
+                }
 
                 if (widget.options.translatable) {
                   var data = await control.toImage(
                     color: currentColor,
-                    height: widget.image.height,
-                    width: widget.image.width,
+                    height: imageHeight.toInt(), // Convert to int
+                    width: imageWidth.toInt(), // Convert to int
                   );
 
                   if (!mounted) return;
-
                   return Navigator.pop(context, data!.buffer.asUint8List());
                 }
 
                 var loadingScreen = showLoadingScreen(context);
-                var image = await screenshotController.capture();
+
+                // Adjust the pixel ratio to ensure the captured image matches the original dimensions
+                var screenSize = MediaQuery
+                    .of(context)
+                    .size;
+                var pixelRatio = imageWidth / screenSize.width;
+
+                // Capture the screenshot with the adjusted pixel ratio
+                var image = await screenshotController.capture(
+                  pixelRatio: pixelRatio,
+                );
+
                 loadingScreen.hide();
 
                 if (!mounted) return;
+
+                // Decode the captured image to get its dimensions
+                final decodedImage = await decodeImageFromList(image!);
+                final capturedWidth = decodedImage.width;
+                final capturedHeight = decodedImage.height;
 
                 return Navigator.pop(context, image);
               },
             ),
           ],
         ),
-        body: Screenshot(
-          controller: screenshotController,
-          child: Container(
-            height: MediaQuery.of(context).size.height,
-            width: MediaQuery.of(context).size.width,
-            decoration: BoxDecoration(
-              color:
-                  widget.options.showBackground ? null : currentBackgroundColor,
-              image: widget.options.showBackground
-                  ? DecorationImage(
-                      image: Image.memory(widget.image.bytes).image,
-                      fit: BoxFit.contain,
-                    )
-                  : null,
-            ),
-            child: HandSignature(
-              control: control,
-              color: currentColor,
-              width: 1.0,
-              maxWidth: 7.0,
-              type: SignatureDrawType.shape,
+        body: Center(
+          child: AspectRatio(
+            aspectRatio: aspectRatio,
+            child: Screenshot(
+              controller: screenshotController,
+              child: Container(
+                width: imageWidth,
+                height: imageHeight,
+                decoration: BoxDecoration(
+                  color: widget.options.showBackground
+                      ? null
+                      : currentBackgroundColor,
+                  image: widget.options.showBackground
+                      ? DecorationImage(
+                    image: Image.memory(imageBytes).image,
+                    fit: BoxFit.fill,
+                  )
+                      : null,
+                ),
+                child: HandSignature(
+                  control: control,
+                  color: currentColor,
+                  width: selectedFontWeight, // Use the selected font weight
+                  maxWidth: selectedFontWeight,
+                  type: SignatureDrawType.shape,
+                ),
+              ),
             ),
           ),
         ),
         bottomNavigationBar: SafeArea(
           child: Container(
-            height: 80,
+            height: 160, // Increase height to accommodate slider and text
             decoration: const BoxDecoration(
               boxShadow: [
                 BoxShadow(blurRadius: 2),
               ],
             ),
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              children: <Widget>[
-                ColorButton(
-                  color: Colors.yellow,
-                  onTap: (color) {
-                    showModalBottomSheet(
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.only(
-                          topRight: Radius.circular(10),
-                          topLeft: Radius.circular(10),
-                        ),
-                      ),
-                      context: context,
-                      backgroundColor: Colors.transparent,
-                      builder: (context) {
-                        return Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.black87,
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(
-                                MediaQuery.of(context).size.width / 2,
-                              ),
-                              topRight: Radius.circular(
-                                MediaQuery.of(context).size.width / 2,
-                              ),
-                            ),
-                          ),
-                          child: SingleChildScrollView(
-                            child: ColorPicker(
-                              wheelDiameter:
-                                  MediaQuery.of(context).size.width - 64,
-                              color: currentColor,
-                              pickersEnabled: const {
-                                ColorPickerType.both: false,
-                                ColorPickerType.primary: false,
-                                ColorPickerType.accent: false,
-                                ColorPickerType.bw: false,
-                                ColorPickerType.custom: false,
-                                ColorPickerType.customSecondary: false,
-                                ColorPickerType.wheel: true,
-                              },
-                              enableShadesSelection: false,
-                              onColorChanged: (color) {
-                                currentColor = color;
-                                setState(() {});
-                              },
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
-                for (var color in widget.options.colors)
-                  ColorButton(
-                    color: color.color,
-                    onTap: (color) {
-                      currentColor = color;
-                      setState(() {});
-                    },
-                    isSelected: color.color == currentColor,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start, // Align children to the start (left)
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0, top: 8.0),
+                  child: Text(
+                    'Weight',
+                    style: TextStyle(
+                      fontSize: 18,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Slider(
+                    value: selectedFontWeight,
+                    min: 1.0,
+                    max: 20.0,
+                    divisions: 10,
+                    label: selectedFontWeight.toString(),
+                    activeColor: Colors.green,
+                    inactiveColor: Colors.green.withOpacity(0.3),
+                    onChanged: (double value) {
+                      setState(() {
+                        selectedFontWeight = value;
+                      });
+                    },
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16.0), // Add padding to the left
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: <Widget>[
+                        IconButton(
+                          icon: const Icon(Icons.color_lens, color: Colors.white),
+                          onPressed: () {
+                            showModalBottomSheet(
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.only(
+                                  topRight: Radius.circular(10),
+                                  topLeft: Radius.circular(10),
+                                ),
+                              ),
+                              context: context,
+                              backgroundColor: Colors.transparent,
+                              builder: (context) {
+                                return Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[300],
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(
+                                        MediaQuery.of(context).size.width / 2,
+                                      ),
+                                      topRight: Radius.circular(
+                                        MediaQuery.of(context).size.width / 2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      SingleChildScrollView(
+                                        child: ColorPicker(
+                                          wheelDiameter: MediaQuery.of(context).size.width - 64,
+                                          borderColor: currentColor,
+                                          onColorChanged: (color) {
+                                            setState(() {
+                                              currentColor = color;
+                                            });
+                                          },
+                                          enableShadesSelection: false,
+                                        ),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          Navigator.pop(context);
+                                        },
+                                        child: Text(
+                                          'Done',
+                                          style: TextStyle(
+                                            color: Colors.black,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                        for (var color in widget.options.colors)
+                          ColorButton(
+                            color: color.color,
+                            onTap: (color) {
+                              currentColor = color;
+                              setState(() {});
+                            },
+                            isSelected: color.color == currentColor,
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -2024,7 +2103,7 @@ class _ImageEditorDrawingState extends State<ImageEditorDrawing> {
   }
 }
 
-/// Button used in bottomNavigationBar in ImageEditorDrawing
+  /// Button used in bottomNavigationBar in ImageEditorDrawing
 class ColorButton extends StatelessWidget {
   final Color color;
   final Function(Color) onTap;
